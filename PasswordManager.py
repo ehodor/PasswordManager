@@ -1,8 +1,10 @@
 #Created by Emma Hodor on 6/20/2023
-
+import json
 import tkinter
 from tkinter import messagebox
 import pyperclip
+import pandas
+import os
 
 ##password is generated with generate_pass() and saved to clipboard
 import random
@@ -35,6 +37,24 @@ window.title("Password Manager")
 window.config(padx=40, pady=40, bg="white")
 
 
+def search():
+    search_for = entry1.get()
+    if len(search_for) == 0:
+        messagebox.showinfo(title="Empty Website Field", message= "Please enter the name of a website.")
+    else:
+        try:
+            with open("account_data.json", "r") as json_file:
+                json_data = json.load(json_file)
+                found_data = json_data[search_for]
+
+
+        except KeyError:
+            messagebox.showinfo(title=f"{search_for} Data Missing", message=f"No account data for {search_for} found.")
+        except FileNotFoundError:
+            messagebox.showinfo(title=f"No File", message="No account info file has been generated yet.")
+        else:
+            messagebox.showinfo(title=f"{search_for} Account Information", message=f"User/Email: {found_data['User/Email: ']}\nPassword: {found_data['Password: ']}")
+
 def add():
     if len(entry1.get()) == 0 or len(entry2.get()) == 0 or len(entry3.get()) == 0:
         messagebox.showinfo(title="Missing Field Entry", message="You must fill out all fields.")
@@ -42,11 +62,36 @@ def add():
         response = messagebox.askokcancel(title=f"{entry1.get()} Account Info",
                                           message=f"Are these details correct?\nWebsite: {entry1.get()}\nUsername: {entry2.get()}\nPassword: {entry3.get()}")
         if response:
-            with open("account_data.txt", "a") as data_file:
-                data_file.write(f"{entry1.get()}:     {entry2.get()} | {entry3.get()}\n")
-                entry1.delete(0, len(entry1.get()))
-                entry2.delete(0, len(entry2.get()))
-                entry3.delete(0, len(entry3.get()))
+            ##with open("account_data.txt", "a") as data_file:
+            new_dict = {"Website": [entry1.get()],
+                        "User/Email": [entry2.get()],
+                        "Password": [entry3.get()],
+                        }
+            if os.path.isfile("account_data.csv"):
+                data = pandas.read_csv("account_data.csv")
+                df = pandas.DataFrame(new_dict)
+                new_data = pandas.concat([data, df])
+                os.remove("account_data.csv")
+                new_data.to_csv("account_data.csv", index=False)
+
+            else:
+                new_data = pandas.DataFrame(new_dict)
+                new_data.to_csv("account_data.csv", index=False)
+            json_dict = {entry1.get(): {"User/Email: ":entry2.get(), "Password: ": entry3.get()}}
+            if os.path.isfile("account_data.json"):
+                with open("account_data.json", "r") as json_file:
+                    json_data = json.load(json_file)
+                    json_data.update(json_dict)
+                with open("account_data.json", "w") as json_file:
+                    json.dump(json_data, json_file, indent=4)
+            else:
+                with open("account_data.json", "w") as json_file:
+                    json.dump(json_dict, json_file, indent=4)
+            entry1.delete(0, len(entry1.get()))
+            entry2.delete(0, len(entry2.get()))
+            entry3.delete(0, len(entry3.get()))
+
+
 
 
 lock_photo = tkinter.PhotoImage(file="lock.png")
@@ -59,10 +104,13 @@ manager_text = tkinter.Label(text="Password Manager", font=("Courier", 50), fg="
 manager_text.grid(row=1, column=0, columnspan=4)
 website = tkinter.Label(text="Website:", font=("Arial", 20), bg="white", fg="black")
 website.grid(column=0, row=2)
-entry1 = tkinter.Entry(width=50)
-entry1.grid(row=2, column=1, columnspan=2)
+entry1 = tkinter.Entry(width=23)
+entry1.grid(row=2, column=1, columnspan=1)
 entry1.config(bg="white", highlightthickness=0, fg="black")
 entry1.focus()
+search_button = tkinter.Button(text="Search", font=("Arial", 16), width=23, command=search)
+search_button.grid(column=2, row=2)
+search_button.config(highlightthickness=0, highlightbackground="white")
 
 email = tkinter.Label(text="User/Email:", font=("Arial", 20), bg="white", fg="black")
 email.grid(column=0, row=3)
